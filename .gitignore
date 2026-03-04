@@ -1,0 +1,78 @@
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Python (backend)
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+pip-wheel-metadata/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# =========================
+# ML / Data artifacts
+# =========================
+*.pth
+*.pt
+*.pkl
+*.joblib
+*.h5
+*.onnx
+
+# Optional local DB / dumps
+*.sqlite3
+*.db
+
+# =========================
+# Node / React (frontend)
+# =========================
+crop-yeild-ui/node_modules/
+crop-yeild-ui/build/
+crop-yeild-ui/dist/
+crop-yeild-ui/coverage/
+crop-yeild-ui/.cache/
+crop-yeild-ui/.eslintcache
+crop-yeild-ui/npm-debug.log*
+crop-yeild-ui/yarn-debug.log*
+crop-yeild-ui/yarn-error.log*
+crop-yeild-ui/pnpm-debug.log*
+
+# =========================
+# IDE / OS
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Project logs
+# =========================
+*.log

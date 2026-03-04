@@ -1,0 +1,372 @@
+.weather-page {
+  min-height: calc(100vh - 80px);
+  background: radial-gradient(circle at top right, #f0f9ff 0%, #e0f2fe 100%);
+  padding: 3rem 2rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.weather-container {
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.header-icon-wrapper.weather {
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+  padding: 1rem;
+  border-radius: 20px;
+  color: white;
+  box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2);
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+.page-subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+/* Layout */
+.content-grid {
+  display: grid;
+  grid-template-columns: 450px 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+/* Form Section */
+.weather-form-container {
+  background: white;
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  margin-bottom: 2rem;
+}
+
+.form-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-header h2 {
+  font-size: 1.5rem;
+  margin: 0;
+  color: #1e293b;
+}
+
+.form-header p {
+  color: #94a3b8;
+  margin-bottom: 2rem;
+}
+
+.search-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.input-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #f1f5f9;
+  border-radius: 14px;
+  background: #f8fafc;
+  transition: all 0.3s ease;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
+}
+
+.btn-submit-weather {
+  width: 100%;
+  padding: 1rem;
+  background: #0ea5e9;
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-submit-weather:hover {
+  background: #0284c7;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+/* Quick Cities */
+.quick-cities-card {
+  background: white;
+  padding: 2rem;
+  border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.card-header h4 {
+  margin: 0;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.city-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.city-btn {
+  padding: 0.6rem;
+  background: #f0f9ff;
+  color: #0369a1;
+  border: 1px solid #e0f2fe;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.city-btn:hover {
+  background: #0ea5e9;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* Result Section */
+.main-display {
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+  border-radius: 30px;
+  padding: 3.5rem;
+  color: white;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 20px 40px rgba(14, 165, 233, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.location-info {
+  margin-bottom: 2rem;
+}
+
+.loc-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loc-text h2 {
+  font-size: 2.5rem;
+  font-weight: 900;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.condition-text {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.temp-main {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.temp-numbers {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.temp-val {
+  font-size: 5rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.temp-unit {
+  font-size: 1.25rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-box {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
+}
+
+.stat-box:hover {
+  transform: translateY(-5px);
+}
+
+.stat-icon-bg {
+  width: 50px;
+  height: 50px;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.stat-icon-bg.humidity { background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); }
+.stat-icon-bg.wind { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
+.stat-icon-bg.pressure { background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); }
+.stat-icon-bg.rain { background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%); }
+
+.stat-data .label {
+  display: block;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.stat-data .value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+/* Farming Tips */
+.farming-tips-container {
+  background: #1e293b;
+  color: white;
+  padding: 2.5rem;
+  border-radius: 24px;
+}
+
+.tips-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  color: #38bdf8;
+}
+
+.tips-title h4 { margin: 0; font-size: 1.2rem; }
+
+.tips-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.tips-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 12px;
+  border-left: 4px solid #38bdf8;
+  line-height: 1.5;
+}
+
+.tip-bullet {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+/* Empty State */
+.weather-empty-state {
+  height: 500px;
+  background: white;
+  border-radius: 30px;
+  border: 3px dashed #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+
+.empty-icon {
+  margin-bottom: 1rem;
+  opacity: 0.3;
+}
+
+/* Animations */
+.weather-animate-in {
+  animation: fadeInScale 0.6s ease-out;
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.spinner { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .content-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .search-grid { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .city-buttons-grid { grid-template-columns: repeat(2, 1fr); }
+  .temp-val { font-size: 3.5rem; }
+}
