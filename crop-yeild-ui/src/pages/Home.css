@@ -37,15 +37,25 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   font-size: 0.875rem;
   font-weight: 600;
-  color: #2d6a4f;
+  color: var(--primary-main);
+}
+
+.hero-greeting {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin: 0;
+  font-family: var(--font-heading);
 }
 
 .hero-title {
   font-size: 3.5rem;
   font-weight: 800;
   line-height: 1.2;
-  color: #1f2937;
+  color: var(--text-main);
   margin: 0;
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
 }
 
 .gradient-text {
@@ -174,12 +184,20 @@
 
 .card-1 {
   top: 10%;
-  right: -10%;
+  right: -10%; /* Flawless floating overlap now */
+  z-index: 10;
 }
 
 .card-2 {
   bottom: 10%;
-  left: -10%;
+  left: -10%; /* Flawless floating overlap now */
+  z-index: 10;
+}
+
+/* Add responsive query to pull them completely inside on smaller screens */
+@media (max-width: 1200px) {
+  .card-1 { right: 5%; }
+  .card-2 { left: 5%; }
 }
 
 .card-icon {

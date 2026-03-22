@@ -90,7 +90,7 @@ function Signup() {
         formData.region
       );
 
-      navigate('/check-email', { state: { email: formData.email } });
+      navigate('/verify-otp', { state: { email: formData.email } });
     } catch (err) {
       setError(err.message || t('signup_failed'));
     } finally {

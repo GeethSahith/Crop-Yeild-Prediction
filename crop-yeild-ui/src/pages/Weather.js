@@ -21,7 +21,7 @@ import {
 import './Weather.css';
 
 function Weather() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const [loading, setLoading] = useState(false);
   const [weatherData, setWeatherData] = useState(null);
@@ -39,7 +39,7 @@ function Weather() {
     setLoading(true);
 
     try {
-      const response = await weatherAPI.getWeather(city, countryCode);
+      const response = await weatherAPI.getWeather(city, countryCode, lang);
       setWeatherData(response);
       toast.success(t('weather_success'));
     } catch (error) {

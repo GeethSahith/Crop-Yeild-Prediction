@@ -9,14 +9,13 @@ const apiClient = axios.create({
   },
 });
 
-// Add authorization token to requests (disabled for now since endpoints don't require auth)
+// Add authorization token to requests
 apiClient.interceptors.request.use(
   (config) => {
-    // Skip adding Authorization header to avoid CORS preflight issues
-    // const token = localStorage.getItem('auth_token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -43,33 +42,40 @@ apiClient.interceptors.response.use(
 // };
 
 export const cropAPI = {
-  recommendYield: async (data) => {
-    const response = await apiClient.post('/api/yield-prediction', data);
+  recommendYield: async (data, lang = 'en') => {
+    const response = await apiClient.post('/api/yield-prediction', { ...data, language: lang });
     return response.data;
   },
 };
 
 export const diseaseAPI = {
-  detectDisease: async (file) => {
+  detectDisease: async (file, lang = 'en') => {
     const formData = new FormData();
     formData.append('file', file);
     const response = await apiClient.post('/api/plant-disease', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: { 
+        'Content-Type': 'multipart/form-data',
+        'lang': lang
+      },
     });
     return response.data;
   },
 };
 
 export const fertilizerAPI = {
-  recommendFertilizer: async (data) => {
-    const response = await apiClient.post('/api/fertilizer-recommendation', data);
+  recommendFertilizer: async (data, lang = 'en') => {
+    const response = await apiClient.post('/api/fertilizer-recommendation', { ...data, language: lang });
     return response.data;
   },
 };
 
 export const weatherAPI = {
-  getWeather: async (city, countryCode = 'IN') => {
-    const response = await apiClient.post('/api/weather', { city, country_code: countryCode });
+  getWeather: async (city, countryCode = 'IN', lang = 'en') => {
+    const response = await apiClient.post('/api/weather', { 
+      city, 
+      country_code: countryCode,
+      language: lang
+    });
     return response.data;
   },
 };

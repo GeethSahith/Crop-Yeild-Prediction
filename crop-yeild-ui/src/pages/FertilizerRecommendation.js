@@ -10,7 +10,7 @@ import {
 import './FertilizerRecommendation.css';
 
 function FertilizerRecommendation() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -47,7 +47,7 @@ function FertilizerRecommendation() {
         crop_name: formData.crop_name,
       };
 
-      const response = await fertilizerAPI.recommendFertilizer(data);
+      const response = await fertilizerAPI.recommendFertilizer(data, lang);
       setResult(response);
       toast.success(t('fertilizer_generated'));
     } catch (error) {

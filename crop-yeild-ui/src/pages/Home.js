@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { transliterateToTelugu } from '../utils/transliteration';
 import {
   Sprout,
   TrendingUp,
@@ -13,7 +15,32 @@ import {
 import './Home.css';
 
 function Home() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const { user } = useAuth();
+  
+  const [displayName, setDisplayName] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    const baseName = user ? (user.user_metadata?.full_name || user.email?.split('@')[0]) : null;
+    
+    if (!baseName) {
+      setDisplayName('');
+      return;
+    }
+
+    if (lang === 'te') {
+      transliterateToTelugu(baseName).then((res) => {
+        if (active) setDisplayName(res);
+      });
+    } else {
+      setDisplayName(baseName);
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [user, lang]);
 
   return (
     <div className="home">
@@ -26,6 +53,10 @@ function Home() {
               <Sprout size={20} />
               <span>{t('hero_badge')}</span>
             </div>
+
+            {displayName && (
+              <h2 className="hero-greeting">{t('greeting_hi')}, {displayName}! 👋</h2>
+            )}
 
             {/* ✅ FIXED — no more dangerous split */}
             <h1 className="hero-title">
@@ -49,29 +80,29 @@ function Home() {
                 alt="Smart Farming"
                 className="hero-img"
               />
+            </div>
 
-              {/* Analytics Card */}
-              <div className="floating-card card-1">
-                <div className="card-icon">
-                  <TrendingUp size={24} />
-                </div>
-                <div>
-                  <p className="card-value">+15%</p>
-                  <p className="card-label">{t('yield_growth')}</p>
-                </div>
+            {/* Analytics Card */}
+            <div className="floating-card card-1">
+              <div className="card-icon">
+                <TrendingUp size={24} />
               </div>
+              <div>
+                <p className="card-value">+15%</p>
+                <p className="card-label">{t('yield_growth')}</p>
+              </div>
+            </div>
 
-              {/* Risk Alert */}
-              <div className="floating-card card-2 border-l-4 border-red-500">
-                <div className="card-icon text-red-500">
-                  <AlertTriangle size={24} />
-                </div>
-                <div>
-                  <p className="card-label-small text-red-600 font-bold">
-                    {t('high')} {t('risk_level')}
-                  </p>
-                  <p className="card-value-small">{t('pest_alert')}</p>
-                </div>
+            {/* Risk Alert */}
+            <div className="floating-card card-2 border-l-4 border-red-500">
+              <div className="card-icon text-red-500">
+                <AlertTriangle size={24} />
+              </div>
+              <div>
+                <p className="card-label-small text-red-600 font-bold">
+                  {t('high')} {t('risk_level')}
+                </p>
+                <p className="card-value-small">{t('pest_alert')}</p>
               </div>
             </div>
           </div>

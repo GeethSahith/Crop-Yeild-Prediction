@@ -1,9 +1,9 @@
 import io
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any, cast
 
 # Third-party utilities
 import pandas as pd
@@ -13,6 +13,24 @@ import torch
 import uvicorn
 import joblib
 from PIL import Image
+
+# Base directory
+BASE_DIR = Path(__file__).resolve().parent
+# Add utils to path (MUST be before utils imports)
+sys.path.append(str(BASE_DIR / "utils"))
+
+try:
+    from utils.model import ResNet9
+    from utils.disease import disease_dic
+    from utils.fertilizer_desc import FERTILIZER_DESCRIPTIONS
+    from utils.fertilizer import fertilizer_dic
+except ImportError:
+    # We will handle missing models at runtime with load_XYZ functions
+    ResNet9 = Any
+    disease_dic = {}
+    FERTILIZER_DESCRIPTIONS = {}
+    fertilizer_dic = {}
+
 from dotenv import load_dotenv
 from requests.exceptions import RequestException
 
@@ -24,8 +42,6 @@ from fastapi.security.http import HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from jose import jwt
 from jose.exceptions import JWTError
-from jose.utils import base64url_decode
-# from jose.backends.ecdsa_backend import ECDSAKey
 
 
 # Load environment variables
@@ -102,20 +118,6 @@ def normalize_gemini_label(text: str) -> str:
 
     return text.strip()
 
-# Base directory
-BASE_DIR = Path(__file__).resolve().parent
-
-# Add utils to path
-sys.path.append(str(BASE_DIR / "utils"))
-
-try:
-    from utils.model import ResNet9
-    from utils.disease import disease_dic
-    from utils.fertilizer_desc import FERTILIZER_DESCRIPTIONS
-    from utils.fertilizer import fertilizer_dic
-except ImportError as e:
-    print(f"Warning: Could not import utils modules: {e}")
-
 # Initialize FastAPI app
 app = FastAPI(
     title="CropWise Backend API",
@@ -136,39 +138,9 @@ app.add_middleware(
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 if not SUPABASE_URL:
     raise RuntimeError("SUPABASE_URL not configured")
-JWKS_URL = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
-
-
-# ==================== JWT Authentication ====================
-
 
 security = HTTPBearer()
 JWT_DEV_MODE = os.getenv("JWT_DEV_MODE", "true").lower() == "true"
-
-jwks_cache = None
-
-
-def get_jwks():
-    global jwks_cache
-    if jwks_cache:
-        return jwks_cache
-
-    response = requests.get(JWKS_URL, timeout=10)
-    response.raise_for_status()
-    jwks_cache = response.json()
-    return jwks_cache
-
-
-# def get_signing_key(token: str):
-#     jwks = get_jwks()
-#     headers = jwt.get_unverified_header(token)
-#     kid = headers.get("kid")  
-
-#     for jwk_key in jwks["keys"]:
-#         if jwk_key["kid"] == kid:
-#             return ECDSAKey(jwk_key)
-
-#     raise HTTPException(status_code=401, detail="Signing key not found")
 
 
 async def verify_jwt(
@@ -182,21 +154,19 @@ async def verify_jwt(
     try:
         # ================= DEV MODE =================
         if JWT_DEV_MODE:
-            # ⚠️ DEVELOPMENT ONLY
-            # Signature verification is intentionally disabled.
-            # NEVER enable this in production.
             payload = jwt.decode(token, options={"verify_signature": False})
             return payload
 
         # ================= PRODUCTION MODE =================
-        signing_key = get_signing_key(token)
+        jwt_secret = os.getenv("SUPABASE_JWT_SECRET")
+        if not jwt_secret:
+            raise HTTPException(status_code=500, detail="JWT secret not configured")
 
         payload = jwt.decode(
             token,
-            signing_key,
-            algorithms=["ES256"],
+            jwt_secret,
+            algorithms=["HS256"],
             audience="authenticated",
-            issuer=f"{SUPABASE_URL}/auth/v1",
         )
 
         return payload
@@ -205,17 +175,7 @@ async def verify_jwt(
         raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
 
 
-# ==================== Models ====================
-# class CropRecommendationRequest(BaseModel):
-#     nitrogen: float
-#     phosphorus: float
-#     potassium: float
-#     temperature: float
-#     humidity: float
-#     ph: float
-#     rainfall: float
-#     previous_yield: Optional[float] = None
-#     language: Optional[str] = "en"
+# ==================== Pydantic Models ====================
 
 class YieldPredictionRequest(BaseModel):
     crop: str
@@ -240,6 +200,7 @@ class DiseaseResponse(BaseModel):
     disease: str
     disease_key: str
     confidence: float
+    model_used: str
     risk_level: str
     alert: str
     description: str
@@ -300,39 +261,17 @@ disease_classes = [
     'Tomato___Tomato_Yellow_Leaf_Curl_Virus', 'Tomato___Tomato_mosaic_virus', 'Tomato___healthy'
 ]
 
-# ==================== Load Models ====================
-disease_model = None
-crop_model = None
-fertilizer_df = None
-yield_model = None
-
-def safe_encode(encoder, value):
-    value = str(value).strip()
-
-    # normalize case
-    value_lower = value.lower()
-
-    # build lookup dictionary
-    mapping = {v.lower(): v for v in encoder.classes_}
-
-    if value_lower in mapping:
-        return encoder.transform([mapping[value_lower]])[0]
-
-    # fallback to first known class if unseen
-    return encoder.transform([encoder.classes_[0]])[0]
+disease_model: Any = None
+fertilizer_df: Optional[pd.DataFrame] = None
+yield_pipeline: Any = None
 
 def predict_yield(data: YieldPredictionRequest):
-
-    # normalize input
-    crop = data.crop.strip().title()
-    season = data.season.strip().title()
-    state = data.state.strip().title()
-
+    """Predict yield using the sklearn Pipeline (handles encoding internally)."""
     input_data = {
-        "Crop": crop,
+        "Crop": data.crop.strip().title(),
         "Crop_Year": data.crop_year,
-        "Season": season,
-        "State": state,
+        "Season": data.season.strip().title(),
+        "State": data.state.strip().title(),
         "Area": data.area,
         "Annual_Rainfall": data.annual_rainfall,
         "Fertilizer": data.fertilizer,
@@ -341,36 +280,49 @@ def predict_yield(data: YieldPredictionRequest):
 
     df = pd.DataFrame([input_data])
 
-    df["Crop"] = safe_encode(yield_encoders["Crop"], crop)
-    df["Season"] = safe_encode(yield_encoders["Season"], season)
-    df["State"] = safe_encode(yield_encoders["State"], state)
+    if yield_pipeline is None:
+        raise RuntimeError("Yield pipeline not loaded")
 
-    df = df[yield_features]
+    # Pipeline handles encoding + prediction in one step
+    prediction = yield_pipeline.predict(df)
+    predicted_yield = max(0.0, float(prediction[0]))
 
-    prediction = yield_model.predict(df)
+    # Use tree variance for confidence
+    try:
+        # Pylance/Pyright may flag .named_steps access on an 'Any' object
+        # Using a more robust access pattern
+        pipeline_any = cast(Any, yield_pipeline)
+        steps = pipeline_any.named_steps
+        rf_model = steps["model"]
+        preprocessor = steps["preprocessor"]
 
-    predicted_yield = max(0, float(prediction[0]))
+        # Transform input through the preprocessor only
+        X_transformed = preprocessor.transform(df)
+        tree_preds = np.array([tree.predict(X_transformed)[0] for tree in rf_model.estimators_])
+        std_dev = float(np.std(tree_preds))
+        mean_pred = float(np.mean(tree_preds))
+        confidence = max(0.5, min(0.99, 1.0 - (std_dev / (abs(mean_pred) + 1e-6))))
+    except Exception:
+        confidence = 0.85
 
-    return predicted_yield, 0.90
+    return predicted_yield, float(confidence)
 
-
-yield_model = None
-yield_encoders = None
-yield_features = None
 
 def load_yield_model():
-    global yield_model, yield_encoders, yield_features
+    global yield_pipeline
 
     try:
-        yield_model = joblib.load(BASE_DIR / "crop_yield.pkl")
-        yield_encoders = joblib.load(BASE_DIR / "encoders.pkl")
-        yield_features = joblib.load(BASE_DIR / "model_features.pkl")
-
-        print("Yield model loaded successfully")
-        return True
+        pipeline_path = BASE_DIR / "crop_yield_pipeline.pkl"
+        if pipeline_path.exists():
+            yield_pipeline = joblib.load(pipeline_path)
+            print("Yield pipeline loaded successfully (single file)")
+            return True
+        else:
+            print(f"Yield pipeline not found at: {pipeline_path}")
+            return False
 
     except Exception as e:
-        print("Error loading yield model:", e)
+        print("Error loading yield pipeline:", e)
         return False
 
 def load_disease_model():
@@ -388,19 +340,6 @@ def load_disease_model():
         return False
     except Exception as e:
         print(f"Error loading disease model: {e}")
-        return False
-
-def load_crop_model():
-    global crop_model
-    try:
-        model_path = BASE_DIR / 'crop_recommender.pkl'
-        if model_path.exists():
-            with open(model_path, 'rb') as f:
-                crop_model = joblib.load(model_path)
-            return True
-        return False
-    except Exception as e:
-        print(f"Error loading crop model: {e}")
         return False
 
 def load_fertilizer_data():
@@ -457,82 +396,6 @@ def predict_disease(image_bytes):
 
     except Exception as e:
         raise RuntimeError(f"Disease prediction failed: {str(e)}")
-    
-def recommend_crop(n, p, k, temp, humidity, ph, rainfall, previous_yield_input=None):
-    try:
-        if crop_model is None:
-            raise Exception("Crop model not loaded")
-
-        # ===== Prepare input =====
-        input_data = np.array(
-            [[n, p, k, temp, humidity, ph, rainfall]],
-            dtype=np.float32
-        )
-
-        # ===== Predict crop =====
-        prediction = crop_model.predict(input_data)
-        CROP_LABELS = [
-            'apple', 'banana', 'blackgram', 'chickpea', 'coconut',
-            'coffee', 'cotton', 'grapes', 'jute', 'kidneybeans',
-            'lentil', 'maize', 'mango', 'mothbeans', 'mungbean',
-            'muskmelon', 'orange', 'papaya', 'pigeonpeas',
-            'pomegranate', 'rice', 'watermelon'
-        ]
-
-        pred_index = int(prediction[0])
-        crop_name = CROP_LABELS[pred_index]
-
-        # ===== Confidence =====
-        confidence = 0.85
-        if hasattr(crop_model, 'predict_proba'):
-            probabilities = crop_model.predict_proba(input_data)
-            confidence = float(np.max(probabilities))
-            confidence = max(0.5, min(confidence, 0.99))
-
-        # ===== Crop-specific base yields (tons/hectare) =====
-        CROP_BASE_YIELD = {
-            "rice": 3.5,
-            "wheat": 3.2,
-            "maize": 4.0,
-            "cotton": 2.2,
-            "sugarcane": 70.0,
-            "potato": 25.0,
-            "tomato": 30.0,
-            "banana": 40.0,
-            "soybean": 2.5,
-        }
-
-        base_yield = CROP_BASE_YIELD.get(str(crop_name).lower(), 3.0)
-
-        # ===== Soil factor =====
-        soil_factor = (n + p + k) / 300
-        soil_factor = max(0.6, min(soil_factor, 1.4))
-
-        # ===== Weather factor =====
-        weather_factor = (
-            (temp / 35) * 0.3 +
-            (humidity / 100) * 0.3 +
-            (rainfall / 300) * 0.4
-        )
-        weather_factor = max(0.6, min(weather_factor, 1.4))
-
-        # ===== Final dynamic yield =====
-        predicted_yield = round(
-            base_yield * soil_factor * weather_factor * confidence,
-            2
-        )
-
-        # ===== Previous season comparison =====
-        if previous_yield_input is not None:
-            previous_yield = previous_yield_input
-        else:
-            previous_yield = round(predicted_yield * np.random.uniform(0.95, 1.05), 2)
-
-        # yield_change = round(predicted_yield - previous_yield, 2)
-        return crop_name, confidence, predicted_yield, previous_yield
-
-    except Exception as e:
-        raise Exception(f"Crop recommendation failed: {str(e)}")
 
 def recommend_fertilizer(n, p, k, crop_name, lang="en"):
     try:
@@ -622,130 +485,33 @@ def recommend_fertilizer(n, p, k, crop_name, lang="en"):
     except Exception as e:
         raise Exception(f"Fertilizer recommendation failed: {str(e)}")
     
-# ==================== Health Check ====================
 @app.get("/")
 async def root():
     return {
         "message": "CropWise Backend API v1.0",
         "status": "running",
         "disease_model_loaded": disease_model is not None,
-        "crop_model_loaded": crop_model is not None
+        "yield_pipeline_loaded": yield_pipeline is not None,
+        "fertilizer_data_loaded": fertilizer_df is not None
     }
 
 @app.get("/health")
 async def health_check():
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "models": {
             "disease": disease_model is not None,
-            "crop": crop_model is not None,
+            "yield_pipeline": yield_pipeline is not None,
             "fertilizer": fertilizer_df is not None
         }
     }
-
-# ==================== Crop Recommendation Endpoint ====================
-# @app.post("/api/crop-recommendation")
-# async def crop_recommendation(request: CropRecommendationRequest):
-#     """
-#     Recommend crop based on soil nutrients and weather conditions
-#     """
-#     try:
-#         if crop_model is None:
-#             raise HTTPException(
-#                 status_code=503,
-#                 detail="Crop model not available"
-#             )
-
-#         # ✅ Use DataFrame with correct feature names
-#         input_df = pd.DataFrame([{
-#             "N": float(request.nitrogen),
-#             "P": float(request.phosphorus),
-#             "K": float(request.potassium),
-#             "temperature": float(request.temperature),
-#             "humidity": float(request.humidity),
-#             "ph": float(request.ph),
-#             "rainfall": float(request.rainfall),
-#         }])
-
-#         # ===== Predict crop =====
-#         prediction = crop_model.predict(input_df)
-#         CROP_LABELS = [
-#             'apple', 'banana', 'blackgram', 'chickpea', 'coconut',
-#             'coffee', 'cotton', 'grapes', 'jute', 'kidneybeans',
-#             'lentil', 'maize', 'mango', 'mothbeans', 'mungbean',
-#             'muskmelon', 'orange', 'papaya', 'pigeonpeas',
-#             'pomegranate', 'rice', 'watermelon'
-#         ]
-
-#         pred_index = int(prediction[0])
-#         crop_name = CROP_LABELS[pred_index]
-
-#         # ===== Confidence =====
-#         confidence = 0.85
-#         if hasattr(crop_model, "predict_proba"):
-#             probabilities = crop_model.predict_proba(input_df)
-#             confidence = float(np.max(probabilities))
-#             confidence = max(0.5, min(confidence, 0.99))
-
-#         # ===== Yield estimation =====
-#         CROP_BASE_YIELD = {
-#             "rice": 3.5,
-#             "wheat": 3.2,
-#             "maize": 4.0,
-#             "cotton": 2.2,
-#             "sugarcane": 70.0,
-#             "potato": 25.0,
-#             "tomato": 30.0,
-#             "banana": 40.0,
-#             "soybean": 2.5,
-#         }
-
-#         base_yield = CROP_BASE_YIELD.get(str(crop_name).lower(), 3.0)
-
-#         soil_factor = (request.nitrogen + request.phosphorus + request.potassium) / 300
-#         soil_factor = max(0.6, min(soil_factor, 1.4))
-
-#         weather_factor = (
-#             (request.temperature / 35) * 0.3 +
-#             (request.humidity / 100) * 0.3 +
-#             (request.rainfall / 300) * 0.4
-#         )
-#         weather_factor = max(0.6, min(weather_factor, 1.4))
-
-#         predicted_yield = round(
-#             base_yield * soil_factor * weather_factor * confidence,
-#             2
-#         )
-
-#         previous_yield = (
-#             request.previous_yield
-#             if request.previous_yield is not None
-#             else round(predicted_yield * np.random.uniform(0.95, 1.05), 2)
-#         )
-
-#         return {
-#             "success": True,
-#             "crop": str(crop_name),
-#             "confidence": round(confidence * 100, 1),
-#             "predicted_yield_tph": predicted_yield,
-#             "previous_season_yield": previous_yield,
-#             "yield_unit": "tons/hectare",
-#         }
-
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         raise HTTPException(
-#             status_code=500,
-#             detail=f"Crop recommendation failed: {str(e)}"
-#         )
 
 
 @app.post("/api/yield-prediction")
 async def yield_prediction(request: YieldPredictionRequest):
     try:
-        if yield_model is None:
+        if yield_pipeline is None:
             raise HTTPException(
                 status_code=503,
                 detail="Yield model not available"
@@ -753,10 +519,11 @@ async def yield_prediction(request: YieldPredictionRequest):
 
         predicted_yield, confidence = predict_yield(request)
 
+        # Using f-string formatting to avoid stubborn round() type errors in VS Code
         return {
             "success": True,
-            "predicted_yield_tph": round(predicted_yield, 2),
-            "confidence": round(confidence * 100, 1),
+            "predicted_yield_tph": float(f"{predicted_yield:.2f}"),
+            "confidence": float(f"{confidence * 100:.1f}"),
             "yield_unit": "tons/hectare"
         }
 
@@ -796,53 +563,49 @@ async def detect_disease(
                 detail="Image size must be under 10MB"
             )
 
-        # ================= GEMINI PREDICTION =================
-        raw_name, confidence = gemini_disease_fallback(contents)
-        disease_name = normalize_gemini_label(raw_name)
-        model_used = "gemini"
+        # ================= PREDICTION (Local Model → Gemini Fallback) =================
+        try:
+            raw_name, confidence = predict_disease(contents)
+            disease_name = raw_name
+            model_used = "local"
+            print("Local model disease:", disease_name, f"({confidence:.1f}%)")
+        except Exception as local_err:
+            print(f"Local model failed: {local_err}, falling back to Gemini")
+            raw_name, confidence = gemini_disease_fallback(contents)
+            disease_name = normalize_gemini_label(raw_name)
+            model_used = "gemini"
+            print("Gemini disease:", disease_name)
 
-        print("Gemini disease:", disease_name)
-
-        # ================= HEALTHY SHORT-CIRCUIT =================
-        # If plant is healthy → return ONLY Gemini text (lowercase)
         # ================= HEALTHY SHORT-CIRCUIT =================
         if "healthy" in disease_name.lower():
+            healthy_text = get_text("healthy", lang)
             return {
                 "success": True,
-                "disease": "healthy",
+                "disease": healthy_text,
                 "disease_key": disease_name,
-                "confidence": 87.0,
+                "confidence": float(f"{confidence:.1f}"),
                 "model_used": model_used,
-                "risk_level": "Low Risk",
+                "risk_level": get_text("low_risk", lang),
                 "alert": "",
-                "description": raw_name.strip().lower(),
+                "description": healthy_text,
                 "treatment": "",
                 "prevention": "",
                 "language": lang,
             }
 
-        # ================= SAFE DISEASE LOOKUP =================
-        disease_info = disease_dic.get(disease_name, {})
+        # ================= DISEASE LOOKUP (fixed for nested en/te structure) =================
+        disease_data = disease_dic.get(disease_name, {})
+        # disease_data structure: {"en": {"description": ..., "treatment": ..., "prevention": ...}, "te": {...}, "risk": ...}
+        lang_data = disease_data.get(lang, disease_data.get("en", {}))
 
-        def safe_lang_extract(obj, lang_code):
-            if isinstance(obj, dict):
-                return obj.get(lang_code) or obj.get("en") or ""
-            return str(obj)
-
-        description = safe_lang_extract(
-            disease_info.get("description", "Disease detected"),
-            lang
-        )
-
-        treatment = safe_lang_extract(
-            disease_info.get("treatment", "Consult agricultural expert"),
-            lang
-        )
-
-        prevention = safe_lang_extract(
-            disease_info.get("prevention", "Maintain good crop hygiene"),
-            lang
-        )
+        if isinstance(lang_data, dict):
+            description = lang_data.get("description", "Disease detected")
+            treatment = lang_data.get("treatment", "Consult agricultural expert")
+            prevention = lang_data.get("prevention", "Maintain good crop hygiene")
+        else:
+            description = "Disease detected"
+            treatment = "Consult agricultural expert"
+            prevention = "Maintain good crop hygiene"
 
         # ================= DISPLAY NAME =================
         display_name = disease_name.replace("___", " - ").replace("_", " ")
@@ -861,7 +624,7 @@ async def detect_disease(
             "success": True,
             "disease": display_name,
             "disease_key": disease_name,
-            "confidence": round(float(confidence), 1),
+            "confidence": float(f"{confidence:.1f}"),
             "model_used": model_used,
             "risk_level": risk_level,
             "alert": alert_message,
@@ -901,14 +664,15 @@ async def fertilizer_recommendation(request: FertilizerRequest):
                 detail=f"Crop '{request.crop_name}' not supported"
             )
         
+        lang = normalize_lang(request.language)
+
         recommendation = recommend_fertilizer(
             request.nitrogen,
             request.phosphorus,
             request.potassium,
-            crop_name
+            crop_name,
+            lang
         )
-        
-        lang = normalize_lang(request.language)
 
         return {
             "success": True,
@@ -977,7 +741,7 @@ async def get_weather(request: WeatherRequest):
             "windSpeed": data["wind"]["speed"],
             "pressure": data["main"]["pressure"],
             "language": lang,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     except HTTPException:
@@ -993,32 +757,83 @@ async def get_weather(request: WeatherRequest):
             detail=f"Weather fetch failed: {str(e)}"
         )
 
-# ==================== Startup Event ====================
+# ==================== Name Translation (Bytez) ====================
+class TranslateNameRequest(BaseModel):
+    name: str
+    target_language: str = "te"
+
+@app.post("/api/translate-name")
+async def translate_name(request: TranslateNameRequest):
+    """Translate a user's name to the target language using Bytez GPT-4o"""
+    try:
+        from bytez import Bytez
+
+        api_key = os.getenv("BYTEZ_API_KEY")
+        if not api_key:
+            raise RuntimeError("BYTEZ_API_KEY not configured in environment")
+
+        sdk = Bytez(api_key)
+        model = sdk.model("openai/gpt-4o")
+
+        lang_map = {"te": "Telugu"}
+        lang_name = lang_map.get(request.target_language, "Telugu")
+
+        results = model.run([
+            {
+                "role": "user",
+                "content": (
+                    f"Transliterate the following English name into {lang_name} script perfectly. "
+                    f"Return ONLY the {lang_name} transliteration, nothing else.\n\n"
+                    f"Name: {request.name}"
+                )
+            }
+        ])
+
+        if results.error:
+            raise RuntimeError(f"Bytez error: {results.error}")
+
+        output = results.output
+        # Bytez returns {'role': 'assistant', 'content': '...'} — extract content
+        if isinstance(output, dict) and 'content' in output:
+            translated = output['content'].strip()
+        else:
+            translated = str(output).strip().strip('"').strip("'")
+
+        return {
+            "success": True,
+            "original": request.name,
+            "translated": translated,
+            "language": request.target_language
+        }
+
+    except Exception as e:
+        print(f"Translation failed: {e}")
+        return {
+            "success": False,
+            "original": request.name,
+            "translated": request.name,
+            "language": request.target_language
+        }
+
+
 @app.on_event("startup")
 async def startup_event():
     """Load models on startup"""
     print("Loading models...")
-    start = datetime.utcnow()
+    start = datetime.now(timezone.utc)
 
     disease_loaded = load_disease_model()
-    crop_loaded = load_crop_model()
     fertilizer_loaded = load_fertilizer_data() is not None
     yield_loaded = load_yield_model()
 
+    print(f"Disease model:    {'✓' if disease_loaded else '✗'}")
+    print(f"Fertilizer data:  {'✓' if fertilizer_loaded else '✗'}")
+    print(f"Yield pipeline:   {'✓' if yield_loaded else '✗'}")
 
-    print(f"Disease model: {'✓' if disease_loaded else '✗'}")
-    print(f"Crop model: {'✓' if crop_loaded else '✗'}")
-    print(f"Fertilizer data: {'✓' if fertilizer_loaded else '✗'}")
-    print(f"Yield model: {'✓' if yield_loaded else '✗'}")
-
-    print(f"Models loaded in {(datetime.utcnow()-start).total_seconds():.2f}s")
+    print(f"Models loaded in {(datetime.now(timezone.utc)-start).total_seconds():.2f}s")
 
     if not disease_loaded:
         print("WARNING: Disease model not found")
-
-    if not crop_loaded:
-        print("WARNING: Crop model not found")
-
     if not fertilizer_loaded:
         print("WARNING: Fertilizer dataset not found")
 

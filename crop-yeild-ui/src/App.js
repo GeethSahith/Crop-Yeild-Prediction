@@ -12,6 +12,7 @@ import Weather from './pages/Weather';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import CheckEmail from './pages/CheckEmail';
+import VerifyOtp from './pages/VerifyOtp';
 import './App.css';
 
 function App() {
@@ -26,9 +27,10 @@ function App() {
                 <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
                 <Route path="/signup" element={<AuthRoute><Signup /></AuthRoute>} />
                 <Route path="/check-email" element={<CheckEmail />} />
+                <Route path="/verify-otp" element={<VerifyOtp />} />
 
                 <Route path="/" element={<Home />} />
-                <Route path="/crop-recommendation" element={<ProtectedRoute><CropRecommendation /></ProtectedRoute>} />
+                <Route path="/yield-prediction" element={<ProtectedRoute><CropRecommendation /></ProtectedRoute>} />
                 <Route path="/disease-detection" element={<ProtectedRoute><DiseaseDetection /></ProtectedRoute>} />
                 <Route path="/fertilizer" element={<ProtectedRoute><FertilizerRecommendation /></ProtectedRoute>} />
                 <Route path="/weather" element={<ProtectedRoute><Weather /></ProtectedRoute>} />

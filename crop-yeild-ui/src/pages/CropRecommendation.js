@@ -9,7 +9,7 @@ import {
 import './CropRecommendation.css';
 
 function CropRecommendation() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [formData, setFormData] = useState({
@@ -41,9 +41,9 @@ function CropRecommendation() {
         fertilizer: parseFloat(formData.fertilizer),
         pesticide: parseFloat(formData.pesticide),
       };
-      const response = await cropAPI.recommendYield(data);
+      const response = await cropAPI.recommendYield(data, lang);
       setResult(response);
-      toast.success('Yield prediction generated!');
+      toast.success(t('crop_generated'));
     } catch (error) {
       toast.error(error.response?.data?.detail || t('crop_failed'));
     } finally {
@@ -76,9 +76,9 @@ function CropRecommendation() {
              <div className="brand-badge">
                 <Sparkles size={14} /> <span>{t('hero_badge')}</span>
               </div>
-              <h1 className="main-title">Yield Prediction System</h1>
+              <h1 className="main-title">{t('crop_title')}</h1>
               <p className="main-subtitle">
-                 Predict expected crop yield using agricultural production data
+                 {t('crop_subtitle')}
               </p>
           </div>
           <div className="header-visual">
@@ -102,14 +102,14 @@ function CropRecommendation() {
             <form onSubmit={handleSubmit} className="modern-form">
               <div className="input-matrix">
                 {[
-                  { id: 'crop', label: 'Crop' },
-                  { id: 'crop_year', label: 'Crop Year' },
-                  { id: 'season', label: 'Season' },
-                  { id: 'state', label: 'State' },
-                  { id: 'area', label: 'Area (hectares)' },
-                  { id: 'annual_rainfall', label: 'Annual Rainfall (mm)' },
-                  { id: 'fertilizer', label: 'Fertilizer (kg)' },
-                  { id: 'pesticide', label: 'Pesticide (kg)' },
+                  { id: 'crop', label: t('crop') },
+                  { id: 'crop_year', label: t('crop_year') },
+                  { id: 'season', label: t('season') },
+                  { id: 'state', label: t('state') },
+                  { id: 'area', label: t('area') },
+                  { id: 'annual_rainfall', label: t('annual_rainfall') },
+                  { id: 'fertilizer', label: t('nav_fertilizer') },
+                  { id: 'pesticide', label: t('pesticide') },
                 ].map((input) => (
                   <div className="field-group" key={input.id}>
                     <label htmlFor={input.id}>{input.label}</label>
@@ -128,7 +128,7 @@ function CropRecommendation() {
                         required
                         placeholder={
                           ['crop', 'season', 'state'].includes(input.id)
-                            ? 'Enter value'
+                            ? t('enter_value')
                             : '0.00'
                         }
                       />
@@ -143,7 +143,7 @@ function CropRecommendation() {
               <div className="action-bar">
                 <button type="submit" className="btn-engine" disabled={loading}>
                   {loading ? <Loader className="spin" /> : <TrendingUp />}
-                  <span>{loading ? t('analyzing') : 'Predict Yield'}</span>
+                  <span>{loading ? t('analyzing') : t('predict_yield')}</span>
                 </button>
                 <button type="button" className="btn-ghost" onClick={handleReset} title={t('reset')}>
                   <RotateCcw size={18} />
@@ -159,7 +159,7 @@ function CropRecommendation() {
                 <div className="recommendation-hero">
                   <div className="hero-label">{t('predicted_yield')}</div>
                     <h2 className="crop-name">
-                      {result.predicted_yield_tph} t/ha
+                      {result.predicted_yield_tph} {t('yield_unit')}
                     </h2>
                   <div className="confidence-pill">
                     <CheckCircle2 size={14} />
@@ -170,12 +170,11 @@ function CropRecommendation() {
                 <div className="insight-box">
                   <div className="box-header">
                     <AlertCircle size={18} />
-                    <h4>Yield Insight</h4>
+                    <h4>{t('yield_insight')}</h4>
                   </div>
                   <p>
-                    Based on the provided agricultural data,
-                    the expected yield is approximately
-                    <strong> {result.predicted_yield_tph} tons/hectare</strong>.
+                    {t('yield_insight_desc')}
+                    <strong> {result.predicted_yield_tph} {t('yield_unit')}</strong>.
                   </p>
                 </div>
 

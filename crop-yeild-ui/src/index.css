@@ -1,13 +1,72 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Color Palette - Premium Agriculture Theme */
+  --primary-dark: #064e3b;      /* Deep Forest */
+  --primary-main: #047857;      /* Vivid Emerald */
+  --primary-light: #10b981;     /* Leaf Green */
+  --primary-soft: #d1fae5;      /* Mint tint */
+  
+  --accent-main: #f59e0b;       /* Earthy Amber */
+  --accent-hover: #d97706;      /* Burnt Amber */
+  --accent-soft: #fef3c7;       /* Soft Sunlight */
+  
+  --bg-base: #f8fafc;           /* Cool Off-white */
+  --bg-card: rgba(255, 255, 255, 0.85); /* Glass Base */
+  
+  --text-main: #0f172a;         /* High Contrast dark slate */
+  --text-muted: #475569;        /* Mid-tone readable gray */
+  --text-subtle: #94a3b8;
+  
+  /* Semantic */
+  --danger: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+
+  /* Structural */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 32px;
+  
+  /* Shadows */
+  --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  --shadow-float: 0 20px 40px -10px rgba(4, 120, 87, 0.15);
+  --shadow-glow: 0 0 20px rgba(16, 185, 129, 0.2);
+  
+  /* Fonts */
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text-main);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Base Glassmorphism utility */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-lg);
 }

@@ -10,7 +10,7 @@ import {
 import './DiseaseDetection.css';
 
 function DiseaseDetection() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -47,7 +47,7 @@ function DiseaseDetection() {
 
     setLoading(true);
     try {
-      const response = await diseaseAPI.detectDisease(selectedFile);
+      const response = await diseaseAPI.detectDisease(selectedFile, lang);
       setResult(response);
       toast.success(t('disease_success'), { icon: '🔍' });
     } catch (error) {

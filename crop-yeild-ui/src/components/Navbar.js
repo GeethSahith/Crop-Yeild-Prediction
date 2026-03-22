@@ -52,7 +52,7 @@ function Navbar() {
             <span>{t('nav_home')}</span>
           </Link>
 
-          <Link to="/crop-recommendation" className={`nav-link ${isActive('/crop-recommendation') ? 'active' : ''}`}>
+          <Link to="/yield-prediction" className={`nav-link ${isActive('/yield-prediction') ? 'active' : ''}`}>
             <Leaf size={18} />
             <span>{t('nav_crop')}</span>
           </Link>
@@ -81,9 +81,6 @@ function Navbar() {
 
           {user ? (
             <div className="user-section">
-              <span className="user-name">
-                {user.user_metadata?.full_name || user.email?.split('@')[0]}
-              </span>
               <button onClick={handleLogout} className="btn-logout">
                 <LogOut size={16} />
                 <span>{t('logout') || 'Logout'}</span>
