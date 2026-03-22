@@ -36,6 +36,7 @@ pip-wheel-metadata/
 # =========================
 # ML / Data artifacts
 # =========================
+crop-yeild-backend/disease_model/
 *.pth
 *.pt
 *.pkl
