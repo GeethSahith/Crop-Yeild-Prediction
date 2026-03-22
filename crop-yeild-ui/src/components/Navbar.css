@@ -94,8 +94,25 @@
 }
 
 /* ============================= */
-/* Actions Section (Right Side)  */
+/* Nav Wrapper & Actions Section */
 /* ============================= */
+
+.nav-menu-wrapper {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  padding: 0.5rem;
+  z-index: 1001;
+}
 
 .navbar-actions {
   display: flex;
@@ -238,10 +255,90 @@
     margin: 0 1rem 1rem;
     padding: 0.75rem 0;
   }
+  
+  .navbar.menu-open {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    transition: none; /* Instant remove to allow slide in immediately */
+  }
+
   .navbar-container {
     padding: 0 1rem;
   }
-  .user-name { display: none; }
-  .user-section::before { display: none; }
   .brand-name { font-size: 1.25rem; }
+  
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-menu-wrapper {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh; /* For mobile browser toolbars */
+    background: #ffffff; /* Explicitly solid white */
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 6rem 2rem 2rem;
+    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-sizing: border-box;
+    box-shadow: none;
+    z-index: 999;
+    overflow-y: auto; /* Allow scrolling if menu items exceed height */
+  }
+
+  .nav-menu-wrapper.open {
+    left: 0;
+  }
+
+  .navbar-links {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .nav-link {
+    width: 100%;
+    padding: 1rem;
+    border-radius: var(--radius-lg);
+  }
+
+  .nav-link span {
+    display: inline !important; /* Restore text inside hamburger */
+    font-size: 1.05rem;
+  }
+
+  .navbar-actions {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(0,0,0,0.1);
+  }
+
+  .lang-switch { width: 100%; text-align: left; }
+  
+  .auth-buttons, .user-section {
+    flex-direction: column;
+    width: 100%;
+    gap: 1rem;
+  }
+
+  .btn-primary, .btn-secondary, .btn-logout {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .user-name, .user-section::before { display: none; }
 }

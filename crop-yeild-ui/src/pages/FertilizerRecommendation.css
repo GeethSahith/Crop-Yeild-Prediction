@@ -597,9 +597,14 @@
   .result-section { position: static; }
 }
 
-@media (max-width: 640px) {
-  .npk-grid { grid-template-columns: 1fr; }
-  .npk-values-summary { grid-template-columns: 1fr; }
+@media (max-width: 768px) {
+  .fertilizer-page { padding: 1rem; }
+  .fertilizer-form { padding: 1.5rem; }
+  .fertilizer-name { font-size: 2rem; }
+  .npk-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .app-params-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .npk-values-summary { grid-template-columns: 1fr; gap: 1rem; }
   .page-title { font-size: 1.8rem; }
   .form-actions { flex-direction: column; }
+  .result-card { padding: 1.5rem; }
 }

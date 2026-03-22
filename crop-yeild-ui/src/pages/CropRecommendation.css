@@ -290,3 +290,14 @@
   .crop-header { flex-direction: column; align-items: flex-start; gap: 2rem; }
   .main-title { font-size: 2.25rem; }
 }
+
+@media (max-width: 768px) {
+  .crop-page { padding: 2rem 1rem; }
+  .data-card { padding: 1.5rem; }
+  .input-matrix { grid-template-columns: 1fr; gap: 1rem; }
+  .card-top { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .metric-row { grid-template-columns: 1fr; }
+  .crop-name { font-size: 2.5rem; }
+  .action-bar { flex-direction: column; }
+  .btn-ghost { width: 100%; padding: 1rem; }
+}

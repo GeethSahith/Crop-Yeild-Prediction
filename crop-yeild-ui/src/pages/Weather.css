@@ -422,7 +422,11 @@
   .content-grid { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  .weather-page { padding: 1rem; }
+  .weather-form-container { padding: 1.5rem; }
+  .weather-card.main-display { padding: 1.5rem; flex-direction: column; text-align: center; gap: 1rem; }
+  .temp-main { justify-content: center; }
   .search-grid { grid-template-columns: 1fr; }
   .stats-grid { grid-template-columns: 1fr; }
   .city-buttons-grid { grid-template-columns: repeat(2, 1fr); }
