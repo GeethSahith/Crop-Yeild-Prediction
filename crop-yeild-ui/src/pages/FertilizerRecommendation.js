@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { fertilizerAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../config/supabase';
 import toast from 'react-hot-toast';
 import { 
   Droplet, Sprout, Loader, Info, Zap, 
@@ -11,6 +13,7 @@ import './FertilizerRecommendation.css';
 
 function FertilizerRecommendation() {
   const { lang, t } = useLanguage();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -50,6 +53,34 @@ function FertilizerRecommendation() {
       const response = await fertilizerAPI.recommendFertilizer(data, lang);
       setResult(response);
       toast.success(t('fertilizer_generated'));
+
+      // Save recommendation to Supabase fertilizer_recommendations table
+      if (user?.id) {
+        try {
+          const { error: dbError } = await supabase
+            .from('fertilizer_recommendations')
+            .insert({
+              user_id: user.id,
+              nitrogen: parseFloat(formData.nitrogen),
+              phosphorus: parseFloat(formData.phosphorus),
+              potassium: parseFloat(formData.potassium),
+              crop_name: formData.crop_name,
+              recommended_fertilizer: response.fertilizer,
+              description: response.description,
+              dosage: response.dosage,
+              npk_analysis: response.npk_analysis,
+              language: lang,
+            });
+
+          if (dbError) {
+            console.error('Failed to save recommendation to DB:', dbError.message);
+          } else {
+            console.log('Recommendation saved to fertilizer_recommendations table');
+          }
+        } catch (dbErr) {
+          console.error('DB insert error:', dbErr);
+        }
+      }
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.detail || t('fertilizer_failed'));

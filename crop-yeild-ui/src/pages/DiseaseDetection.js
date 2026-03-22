@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { diseaseAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../config/supabase';
 import { generatePDF } from '../utils/reportGenerator';
 import toast from 'react-hot-toast';
 import {
@@ -11,6 +13,7 @@ import './DiseaseDetection.css';
 
 function DiseaseDetection() {
   const { lang, t } = useLanguage();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -50,6 +53,57 @@ function DiseaseDetection() {
       const response = await diseaseAPI.detectDisease(selectedFile, lang);
       setResult(response);
       toast.success(t('disease_success'), { icon: '🔍' });
+
+      // Upload image to Supabase Storage & save detection to disease_detections table
+      if (user?.id) {
+        try {
+          // Upload image to disease-images bucket
+          const fileExt = selectedFile.name.split('.').pop();
+          const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('disease-images')
+            .upload(filePath, selectedFile, {
+              contentType: selectedFile.type,
+              upsert: false,
+            });
+
+          let imageUrl = null;
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('disease-images')
+              .getPublicUrl(filePath);
+            imageUrl = urlData?.publicUrl || null;
+          } else {
+            console.error('Image upload failed:', uploadError.message);
+          }
+
+          // Insert detection result into disease_detections table
+          const { error: dbError } = await supabase
+            .from('disease_detections')
+            .insert({
+              user_id: user.id,
+              image_url: imageUrl,
+              disease_name: response.disease,
+              disease_key: response.disease_key,
+              confidence: response.confidence,
+              risk_level: response.risk_level,
+              model_used: response.model_used,
+              description: response.description,
+              treatment: response.treatment,
+              prevention: response.prevention,
+              language: response.language || lang,
+            });
+
+          if (dbError) {
+            console.error('Failed to save detection to DB:', dbError.message);
+          } else {
+            console.log('Detection saved to disease_detections table');
+          }
+        } catch (dbErr) {
+          console.error('DB/Storage error:', dbErr);
+        }
+      }
     } catch (error) {
       toast.error(t('detection_failed'));
     } finally {

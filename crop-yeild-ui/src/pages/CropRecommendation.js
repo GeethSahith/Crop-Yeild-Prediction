@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { cropAPI } from '../services/api';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../config/supabase';
 import toast from 'react-hot-toast';
 import {
   Sprout, TrendingUp, Droplets, Thermometer, CloudRain, 
@@ -10,6 +12,7 @@ import './CropRecommendation.css';
 
 function CropRecommendation() {
   const { lang, t } = useLanguage();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [formData, setFormData] = useState({
@@ -44,6 +47,35 @@ function CropRecommendation() {
       const response = await cropAPI.recommendYield(data, lang);
       setResult(response);
       toast.success(t('crop_generated'));
+
+      // Save prediction to Supabase yield_predictions table
+      if (user?.id) {
+        try {
+          const { error: dbError } = await supabase
+            .from('yield_predictions')
+            .insert({
+              user_id: user.id,
+              crop: formData.crop,
+              crop_year: parseInt(formData.crop_year),
+              season: formData.season,
+              state: formData.state,
+              area: parseFloat(formData.area),
+              annual_rainfall: parseFloat(formData.annual_rainfall),
+              fertilizer: parseFloat(formData.fertilizer),
+              pesticide: parseFloat(formData.pesticide),
+              predicted_yield: response.predicted_yield_tph,
+              confidence: response.confidence,
+            });
+
+          if (dbError) {
+            console.error('Failed to save prediction to DB:', dbError.message);
+          } else {
+            console.log('Prediction saved to yield_predictions table');
+          }
+        } catch (dbErr) {
+          console.error('DB insert error:', dbErr);
+        }
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || t('crop_failed'));
     } finally {
