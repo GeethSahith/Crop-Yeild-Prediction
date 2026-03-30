@@ -29,6 +29,7 @@ ENV/
 .coverage.*
 htmlcov/
 pip-wheel-metadata/
+/cropwise-api
 
 # Jupyter
 .ipynb_checkpoints/

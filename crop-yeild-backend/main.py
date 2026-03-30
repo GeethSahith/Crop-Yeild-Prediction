@@ -135,9 +135,10 @@ app.add_middleware(
 )
 
 # ==================== JWT Authentication ====================
-SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 if not SUPABASE_URL:
-    raise RuntimeError("SUPABASE_URL not configured")
+    print("WARNING: SUPABASE_URL not configured — JWT auth will not work")
+
 
 security = HTTPBearer()
 JWT_DEV_MODE = os.getenv("JWT_DEV_MODE", "true").lower() == "true"
