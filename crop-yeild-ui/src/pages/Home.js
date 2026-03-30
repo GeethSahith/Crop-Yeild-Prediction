@@ -66,7 +66,7 @@ function Home() {
             <p className="hero-description">{t('hero_desc')}</p>
 
             <div className="hero-actions">
-              <Link to="/crop-recommendation" className="btn-hero-primary">
+              <Link to="/yield-prediction" className="btn-hero-primary">
                 {t('get_started')}
                 <ArrowRight size={20} />
               </Link>
@@ -122,7 +122,7 @@ function Home() {
           <div className="features-grid">
 
             {/* Crop */}
-            <Link to="/crop-recommendation" className="feature-card">
+            <Link to="/yield-prediction" className="feature-card">
               <div className="feature-icon crop">
                 <Sprout size={32} />
               </div>
@@ -202,7 +202,7 @@ function Home() {
         <div className="cta-container">
           <h2 className="cta-title">{t('cta_title')}</h2>
           <div className="cta-actions">
-            <Link to="/crop-recommendation" className="btn-cta-primary">
+            <Link to="/yield-prediction" className="btn-cta-primary">
               {t('get_started')}
               <ArrowRight size={20} />
             </Link>
